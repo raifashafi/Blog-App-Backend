@@ -2,7 +2,10 @@ const express=require("express")
 const mongoose=require("mongoose")
 const cors=require("cors")
 const bcrypt=require( "bcryptjs")
+const jwt=require("jsonwebtoken")
 const {usermodel}=require("./models/blog")
+
+
 
 const app=express()
 app.use(cors())
@@ -25,7 +28,36 @@ app.post("/signUp",async (req,res)=>{
     blog.save()
     res.json({"status":"success"})
 })
+app.post("/signIn",(req,res)=>{
 
+
+    let input=req.body
+
+    usermodel.find({"email":req.body.email}).then(
+        (response)=>{
+        if (response.length>0) {
+            let dbPassword=response[0].password
+            console.log(dbPassword)
+            bcrypt.compare(input.password,dbPassword,(error,isMatch)=>{
+                if (isMatch) {
+                   jwt.sign({email:input.email},"blog-app",{expiresIn:"1d"},(error,token)=>{
+                    if (error) {
+                        res.json({"status":"unable to create token"})
+                    } else {
+                        res.json({"status":"success","userId":response[0]._id,"token":token})
+                    }
+                   })
+                } else {
+                    res.json({"status":"incorrect password"})
+                }
+            })
+        } else {
+            res.json({"status":"user not found"})
+        }
+        }
+    ).catch()
+
+})
 app.listen(8081,()=>{
     console.log("server started")
 })
